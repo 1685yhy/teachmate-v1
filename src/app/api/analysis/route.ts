@@ -17,8 +17,13 @@ export async function POST(req: Request) {
     // 我们这里模拟一段转录文本，然后交给 DeepSeek-V3 进行教学指标分析
     const transcript = "（模拟转录：老师正在讲解课程核心内容，强调了三个重点，并向学生提出了一个关于为什么的问题...）";
 
-    // 2. 调用 DeepSeek 进行分析
-    const analysis = await analyzeAudio(transcript);
+    // 2. 调用 DeepSeek 进行分析（添加超时保护）
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('分析超时')), 60000)
+    );
+
+    const analysisPromise = analyzeAudio(transcript);
+    const analysis = await Promise.race([analysisPromise, timeoutPromise]) as any;
 
     // 3. 返回结果
     return NextResponse.json({ 

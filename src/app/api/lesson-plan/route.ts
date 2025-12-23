@@ -9,12 +9,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: '主题不能为空' }, { status: 400 });
     }
 
-    const content = await generateLessonPlan({ subject, grade, theme, duration });
+    // 添加超时保护
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('请求超时')), 60000)
+    );
+
+    const contentPromise = generateLessonPlan({ subject, grade, theme, duration });
+    
+    const content = await Promise.race([contentPromise, timeoutPromise]) as string;
     
     return NextResponse.json({ content });
   } catch (error: any) {
     console.error('Lesson Plan Generation Error:', error);
-    return NextResponse.json({ error: error.message || '生成失败' }, { status: 500 });
+    return NextResponse.json({ 
+      error: error.message || '生成失败',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    }, { status: 500 });
   }
 }
 

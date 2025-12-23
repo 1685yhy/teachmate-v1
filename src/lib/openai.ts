@@ -1,8 +1,16 @@
 import OpenAI from 'openai';
 
+// 确保环境变量正确读取
+const apiKey = process.env.OPENAI_API_KEY || 'sk-85a2f65933804eec97edf9f539922794';
+const baseURL = process.env.OPENAI_BASE_URL || 'https://api.deepseek.com';
+
+if (!apiKey) {
+  console.warn('⚠️ OPENAI_API_KEY is not set');
+}
+
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || 'sk-85a2f65933804eec97edf9f539922794',
-  baseURL: process.env.OPENAI_BASE_URL || 'https://api.deepseek.com',
+  apiKey,
+  baseURL,
 });
 
 /**
