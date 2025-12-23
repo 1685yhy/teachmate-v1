@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import { saveAs } from 'file-saver';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
@@ -23,10 +25,39 @@ import { Header } from '@/components/Header';
 import { cn } from '@/lib/utils';
 
 export default function LessonPlanPage() {
+  const searchParams = useSearchParams();
+  const historyId = searchParams.get('history');
+  
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGenerated, setIsGenerated] = useState(false);
   const [copied, setCopied] = useState(false);
   const [content, setContent] = useState('');
+  const [historyRecords, setHistoryRecords] = useState<any[]>([]);
+
+  // 加载历史记录（仅在客户端）
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const history = JSON.parse(localStorage.getItem('lesson_plans') || '[]');
+      setHistoryRecords(history);
+    }
+  }, []);
+  
+  // 从历史记录加载
+  useEffect(() => {
+    if (historyId) {
+      const plans = JSON.parse(localStorage.getItem('lesson_plans') || '[]');
+      const plan = plans.find((p: any) => p.id === historyId);
+      if (plan) {
+        setContent(plan.content);
+        setIsGenerated(true);
+        // 设置表单值
+        const themeInput = document.querySelector('input[placeholder*="课题"]') as HTMLInputElement;
+        const subjectSelect = document.querySelector('select') as HTMLSelectElement;
+        if (themeInput) themeInput.value = plan.theme || '';
+        if (subjectSelect) subjectSelect.value = plan.subject || '';
+      }
+    }
+  }, [historyId]);
 
   // Form states
   const [subject, setSubject] = useState('math');
@@ -61,10 +92,13 @@ export default function LessonPlanPage() {
         theme,
         subject: subject === 'other' ? otherSubject : subject,
         grade,
+        duration,
         content: data.content,
+        version: data.version || 'standard',
+        metadata: data.metadata,
         date: new Date().toISOString(),
       };
-      const updatedHistory = [newPlan, ...history].slice(0, 10);
+      const updatedHistory = [newPlan, ...history].slice(0, 20);
       localStorage.setItem('lesson_plans', JSON.stringify(updatedHistory));
     } catch (error) {
       console.error(error);
@@ -300,6 +334,51 @@ export default function LessonPlanPage() {
                   </article>
                 </div>
               </>
+            )}
+          </div>
+        </div>
+
+        {/* 历史记录板块 */}
+        <div className="mt-12 bg-white rounded-3xl border border-gray-100 shadow-xl p-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-600">
+                <FileText size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-gray-900">教案历史记录</h3>
+                <p className="text-sm text-gray-500">查看和管理之前生成的教案</p>
+              </div>
+            </div>
+            <Link 
+              href="/lesson-plan/history"
+              className="flex items-center space-x-2 text-green-600 hover:text-green-700 font-bold transition-colors"
+            >
+              <span>查看全部</span>
+              <ChevronRight size={18} />
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {historyRecords.length > 0 ? (
+              historyRecords.slice(0, 3).map((item: any, index: number) => (
+                <Link
+                  key={index}
+                  href={`/lesson-plan?history=${item.id}`}
+                  className="p-4 bg-gray-50 rounded-xl border border-gray-200 hover:border-green-300 hover:bg-green-50 transition-all group"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-gray-500 uppercase">{item.subject || '通用'}</span>
+                    <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded-full">{item.version || '标准版'}</span>
+                  </div>
+                  <div className="text-sm font-bold text-gray-900 mb-1 line-clamp-1">{item.theme || '教案'}</div>
+                  <div className="text-xs text-gray-500">{new Date(item.date || Date.now()).toLocaleDateString()}</div>
+                </Link>
+              ))
+            ) : (
+              <div className="col-span-3 text-center py-8 text-gray-400">
+                <FileText className="mx-auto mb-2 opacity-50" size={32} />
+                <p className="text-sm">暂无教案记录</p>
+              </div>
             )}
           </div>
         </div>

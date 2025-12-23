@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Upload, 
   FileAudio, 
@@ -12,8 +12,12 @@ import {
   Clock,
   MessageSquare,
   ArrowLeft,
-  Download
+  Download,
+  BarChart3,
+  Target,
+  History
 } from 'lucide-react';
+import Link from 'next/link';
 import { Header } from '@/components/Header';
 import { cn } from '@/lib/utils';
 
@@ -24,10 +28,19 @@ export default function AnalysisPage() {
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState(0);
   const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [historyRecords, setHistoryRecords] = useState<any[]>([]);
 
   // Form states
   const [subject, setSubject] = useState('');
   const [grade, setGrade] = useState('');
+
+  // 加载历史记录（仅在客户端）
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const history = JSON.parse(localStorage.getItem('analysis_history') || '[]');
+      setHistoryRecords(history);
+    }
+  }, []);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -66,6 +79,7 @@ export default function AnalysisPage() {
       const newAnalysis = {
         ...data,
         id: Date.now().toString(),
+        enhanced: false,
       };
       const updatedHistory = [newAnalysis, ...history].slice(0, 20);
       localStorage.setItem('analysis_history', JSON.stringify(updatedHistory));
@@ -218,7 +232,7 @@ export default function AnalysisPage() {
                 <div className="flex items-center justify-between mb-8">
                   <div>
                     <h3 className="text-2xl font-black text-gray-900">分析报告</h3>
-                    <p className="text-sm text-gray-400">生成时间：{new Date(analysisResult.meta.date).toLocaleString()}</p>
+                    <p className="text-sm text-gray-400">生成时间：{analysisResult?.meta?.date ? new Date(analysisResult.meta.date).toLocaleString() : new Date().toLocaleString()}</p>
                   </div>
                   <button 
                     onClick={() => window.print()}
@@ -229,85 +243,208 @@ export default function AnalysisPage() {
                   </button>
                 </div>
 
-                {/* Report Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                  {[
-                    { 
-                      label: '开放式问题比例', 
-                      val: `${(analysisResult.analysis.open_question_ratio * 100).toFixed(0)}%`, 
-                      target: '≥25%', 
-                      status: analysisResult.analysis.open_question_ratio >= 0.25 ? 'good' : 'warning', 
-                      icon: MessageSquare, 
-                      color: analysisResult.analysis.open_question_ratio >= 0.25 ? 'text-green-600' : 'text-orange-600', 
-                      bg: analysisResult.analysis.open_question_ratio >= 0.25 ? 'bg-green-50' : 'bg-orange-50' 
-                    },
-                    { 
-                      label: '教师语速', 
-                      val: `${analysisResult.analysis.speech_rate}字/分`, 
-                      target: '180-220', 
-                      status: analysisResult.analysis.speech_rate >= 180 && analysisResult.analysis.speech_rate <= 220 ? 'good' : 'warning', 
-                      icon: Clock, 
-                      color: analysisResult.analysis.speech_rate >= 180 && analysisResult.analysis.speech_rate <= 220 ? 'text-green-600' : 'text-orange-600', 
-                      bg: analysisResult.analysis.speech_rate >= 180 && analysisResult.analysis.speech_rate <= 220 ? 'bg-green-50' : 'bg-orange-50' 
-                    },
-                    { 
-                      label: '积极反馈次数', 
-                      val: `${analysisResult.analysis.positive_feedback_count} 次`, 
-                      target: '≥5次', 
-                      status: analysisResult.analysis.positive_feedback_count >= 5 ? 'good' : 'warning', 
-                      icon: ArrowLeft, 
-                      color: analysisResult.analysis.positive_feedback_count >= 5 ? 'text-green-600' : 'text-orange-600', 
-                      bg: analysisResult.analysis.positive_feedback_count >= 5 ? 'bg-green-50' : 'bg-orange-50' 
-                    },
-                  ].map((stat, i) => (
-                    <div key={i} className="p-6 rounded-2xl border border-gray-100 bg-gray-50/50">
-                      <div className="flex items-center space-x-3 mb-4">
-                        <div className={cn("p-2 rounded-lg", stat.bg, stat.color)}>
-                          <stat.icon size={20} />
+                {/* 三大亮点 */}
+                {analysisResult?.analysis?.highlights && Array.isArray(analysisResult.analysis.highlights) && analysisResult.analysis.highlights.length > 0 && (
+                  <div className="mb-8 p-6 rounded-2xl bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-200">
+                    <h4 className="text-xl font-black text-gray-900 mb-4 flex items-center space-x-2">
+                      <span>🏆 三大亮点</span>
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {analysisResult.analysis.highlights.map((highlight: any, idx: number) => (
+                        <div key={idx} className="bg-white p-4 rounded-xl border border-yellow-100">
+                          <div className="text-sm font-black text-yellow-600 mb-2">{idx + 1}. {highlight.title}</div>
+                          <div className="text-xs text-gray-700 leading-relaxed mb-2">{highlight.description}</div>
+                          {highlight.evidence && (
+                            <div className="bg-yellow-50 rounded-lg p-3 mt-2 border border-yellow-200">
+                              <div className="text-[10px] font-black text-yellow-700 uppercase tracking-widest mb-1">💬 具体表现</div>
+                              <div className="text-xs text-gray-800 leading-relaxed italic">"{highlight.evidence}"</div>
+                            </div>
+                          )}
+                          {highlight.impact && (
+                            <div className="text-xs text-green-700 mt-2 font-medium">
+                              ✨ 效果：{highlight.impact}
+                            </div>
+                          )}
                         </div>
-                        <span className="text-sm font-bold text-gray-700">{stat.label}</span>
-                      </div>
-                      <div className="text-3xl font-black text-gray-900 mb-1">{stat.val}</div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-400 font-medium">参考标准: {stat.target}</span>
-                        <div className={cn(
-                          "px-2 py-0.5 rounded-full text-[10px] font-black uppercase",
-                          stat.status === 'good' ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
-                        )}>
-                          {stat.status === 'good' ? '优秀' : '待提升'}
-                        </div>
-                      </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
+                )}
+
+                {/* 关键数据 */}
+                <div className="mb-8">
+                  <h4 className="text-lg font-bold text-gray-900 flex items-center space-x-2 mb-6">
+                    <BarChart3 className="text-blue-600" size={20} />
+                    <span>📊 关键数据</span>
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {[
+                      { 
+                        label: '开放式问题比例', 
+                        val: `${((analysisResult?.analysis?.open_question_ratio ?? 0.15) * 100).toFixed(0)}%`, 
+                        target: '≥25%', 
+                        status: (analysisResult?.analysis?.open_question_ratio ?? 0.15) >= 0.25 ? 'good' : 'warning', 
+                        icon: MessageSquare, 
+                        color: (analysisResult?.analysis?.open_question_ratio ?? 0.15) >= 0.25 ? 'text-green-600' : 'text-orange-600', 
+                        bg: (analysisResult?.analysis?.open_question_ratio ?? 0.15) >= 0.25 ? 'bg-green-50' : 'bg-orange-50' 
+                      },
+                      { 
+                        label: '教师语速', 
+                        val: `${analysisResult?.analysis?.speech_rate ?? 210}字/分`, 
+                        target: '180-220', 
+                        status: (analysisResult?.analysis?.speech_rate ?? 210) >= 180 && (analysisResult?.analysis?.speech_rate ?? 210) <= 220 ? 'good' : 'warning', 
+                        icon: Clock, 
+                        color: (analysisResult?.analysis?.speech_rate ?? 210) >= 180 && (analysisResult?.analysis?.speech_rate ?? 210) <= 220 ? 'text-green-600' : 'text-orange-600', 
+                        bg: (analysisResult?.analysis?.speech_rate ?? 210) >= 180 && (analysisResult?.analysis?.speech_rate ?? 210) <= 220 ? 'bg-green-50' : 'bg-orange-50' 
+                      },
+                      { 
+                        label: '积极反馈次数', 
+                        val: `${analysisResult?.analysis?.positive_feedback_count ?? 3} 次`, 
+                        target: '≥5次', 
+                        status: (analysisResult?.analysis?.positive_feedback_count ?? 3) >= 5 ? 'good' : 'warning', 
+                        icon: ArrowLeft, 
+                        color: (analysisResult?.analysis?.positive_feedback_count ?? 3) >= 5 ? 'text-green-600' : 'text-orange-600', 
+                        bg: (analysisResult?.analysis?.positive_feedback_count ?? 3) >= 5 ? 'bg-green-50' : 'bg-orange-50' 
+                      },
+                    ].map((stat, i) => (
+                      <div key={i} className="p-6 rounded-2xl border border-gray-100 bg-gray-50/50">
+                        <div className="flex items-center space-x-3 mb-4">
+                          <div className={cn("p-2 rounded-lg", stat.bg, stat.color)}>
+                            <stat.icon size={20} />
+                          </div>
+                          <span className="text-sm font-bold text-gray-700">{stat.label}</span>
+                        </div>
+                        <div className="text-3xl font-black text-gray-900 mb-1">{stat.val}</div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-gray-400 font-medium">参考标准: {stat.target}</span>
+                          <div className={cn(
+                            "px-2 py-0.5 rounded-full text-[10px] font-black uppercase",
+                            stat.status === 'good' ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
+                          )}>
+                            {stat.status === 'good' ? '优秀' : '待提升'}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
-                {/* Suggestions */}
-                <div className="space-y-6">
+                {/* 改进建议 */}
+                <div className="space-y-6 mb-8">
                   <h4 className="text-lg font-bold text-gray-900 flex items-center space-x-2">
                     <AlertCircle size={20} className="text-blue-600" />
-                    <span>改进建议</span>
+                    <span>🎯 改进建议</span>
                   </h4>
-                  {analysisResult.analysis.suggestions.map((suggestion: any, idx: number) => (
-                    <div key={idx} className={cn(
-                      "p-6 rounded-2xl border",
-                      idx === 0 ? "bg-blue-50/50 border-blue-100" : "bg-indigo-50/50 border-indigo-100"
-                    )}>
-                      <h5 className={cn("font-bold mb-2", idx === 0 ? "text-blue-900" : "text-indigo-900")}>
-                        {idx + 1}. {suggestion.title}
-                      </h5>
-                      <p className={cn("text-sm mb-4 leading-relaxed", idx === 0 ? "text-blue-800/80" : "text-indigo-800/80")}>
-                        <strong>当前表现：</strong>{suggestion.current_performance}<br />
-                        <strong>具体建议：</strong>{suggestion.advice}
-                      </p>
-                      <div className="bg-white rounded-xl p-4 border border-blue-100">
-                        <span className={cn("text-[10px] font-black uppercase tracking-widest block mb-2", idx === 0 ? "text-blue-600" : "text-indigo-600")}>
-                          话术示例
-                        </span>
-                        <p className="text-sm text-gray-700 italic">"{suggestion.example}"</p>
+                  {analysisResult?.analysis?.suggestions && Array.isArray(analysisResult.analysis.suggestions) && analysisResult.analysis.suggestions.length > 0 ? (
+                    analysisResult.analysis.suggestions.map((suggestion: any, idx: number) => (
+                      <div key={idx} className="p-6 rounded-2xl bg-blue-50/50 border border-blue-100">
+                        <h5 className="font-bold text-blue-900 mb-3">
+                          {idx + 1}. {suggestion.title || '改进建议'}
+                        </h5>
+                        {suggestion.current_performance && (
+                          <p className="text-sm text-blue-800/80 mb-2">
+                            <strong>当前：</strong>{suggestion.current_performance}
+                          </p>
+                        )}
+                        {suggestion.advice && (
+                          <p className="text-sm text-blue-800/80 mb-2">
+                            <strong>建议：</strong>{suggestion.advice}
+                          </p>
+                        )}
+                        {suggestion.example && (
+                          <div className="bg-white rounded-xl p-4 border border-blue-100 mt-3 mb-2">
+                            <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest block mb-2">话术示例</span>
+                            <p className="text-sm text-gray-700 italic">"{suggestion.example}"</p>
+                          </div>
+                        )}
+                        {suggestion.expected_effect && (
+                          <p className="text-sm text-blue-800/80 mb-1">
+                            <strong>预期效果：</strong>{suggestion.expected_effect}
+                          </p>
+                        )}
+                        {suggestion.training_method && (
+                          <p className="text-sm text-blue-800/80">
+                            <strong>训练方法：</strong>{suggestion.training_method}
+                          </p>
+                        )}
                       </div>
+                    ))
+                  ) : (
+                    <div className="p-6 rounded-2xl bg-gray-50 border border-gray-200">
+                      <p className="text-gray-600 text-sm">暂无改进建议数据</p>
                     </div>
-                  ))}
+                  )}
                 </div>
+
+                {/* 对比分析 */}
+                {analysisResult?.analysis?.comparison && (
+                  <div className="mb-8 p-6 rounded-2xl bg-purple-50/50 border border-purple-100">
+                    <h4 className="text-lg font-bold text-gray-900 flex items-center space-x-2 mb-4">
+                      <BarChart3 className="text-purple-600" size={20} />
+                      <span>📈 对比分析</span>
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {analysisResult.analysis.comparison.peer_average && (
+                        <div className="bg-white p-4 rounded-xl border border-purple-100">
+                          <div className="text-sm font-bold text-purple-700 mb-2">与同行平均对比</div>
+                          <div className="space-y-2 text-xs text-gray-600">
+                            {analysisResult.analysis.comparison.peer_average.open_question_ratio && (
+                              <div>开放式问题比例：{((analysisResult.analysis.comparison.peer_average.open_question_ratio ?? 0) * 100).toFixed(0)}%</div>
+                            )}
+                            {analysisResult.analysis.comparison.peer_average.speech_rate && (
+                              <div>教师语速：{analysisResult.analysis.comparison.peer_average.speech_rate}字/分</div>
+                            )}
+                            {analysisResult.analysis.comparison.peer_average.positive_feedback_count && (
+                              <div>积极反馈次数：{analysisResult.analysis.comparison.peer_average.positive_feedback_count}次</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      {analysisResult?.analysis?.comparison?.excellent_teacher && (
+                        <div className="bg-white p-4 rounded-xl border border-purple-100">
+                          <div className="text-sm font-bold text-purple-700 mb-2">与优秀教师对比</div>
+                          <div className="space-y-2 text-xs text-gray-600">
+                            {analysisResult.analysis.comparison.excellent_teacher.open_question_ratio && (
+                              <div>开放式问题比例：{((analysisResult.analysis.comparison.excellent_teacher.open_question_ratio ?? 0) * 100).toFixed(0)}%</div>
+                            )}
+                            {analysisResult.analysis.comparison.excellent_teacher.speech_rate && (
+                              <div>教师语速：{analysisResult.analysis.comparison.excellent_teacher.speech_rate}字/分</div>
+                            )}
+                            {analysisResult.analysis.comparison.excellent_teacher.positive_feedback_count && (
+                              <div>积极反馈次数：{analysisResult.analysis.comparison.excellent_teacher.positive_feedback_count}次</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* 成长目标 */}
+                {analysisResult?.analysis?.growth_targets && Array.isArray(analysisResult.analysis.growth_targets) && analysisResult.analysis.growth_targets.length > 0 && (
+                  <div className="mb-8 p-6 rounded-2xl bg-green-50/50 border border-green-100">
+                    <h4 className="text-lg font-bold text-gray-900 flex items-center space-x-2 mb-4">
+                      <Target className="text-green-600" size={20} />
+                      <span>📈 成长目标（下周）</span>
+                    </h4>
+                    <div className="space-y-3">
+                      {analysisResult.analysis.growth_targets.map((target: any, idx: number) => (
+                        <div key={idx} className="bg-white p-4 rounded-xl border border-green-100">
+                          <div className="text-sm font-bold text-green-700 mb-1">
+                            {target.metric === 'open_question_ratio' ? '开放式问题比例' :
+                             target.metric === 'speech_rate' ? '教师语速' :
+                             target.metric === 'positive_feedback_count' ? '积极反馈次数' : target.metric}
+                          </div>
+                          <div className="text-xs text-gray-600">
+                            当前：{target.metric === 'open_question_ratio' ? `${((target.current ?? 0) * 100).toFixed(0)}%` : target.current} 
+                            → 目标：{target.metric === 'open_question_ratio' ? `${((target.target ?? 0) * 100).toFixed(0)}%` : target.target}
+                            {target.timeline && <span className="ml-2">（{target.timeline}）</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="mt-12 pt-8 border-t border-gray-100 flex justify-between items-center">
                   <button onClick={() => setStep('upload')} className="text-sm font-bold text-gray-500 hover:text-gray-700">分析另一段录音</button>
@@ -315,6 +452,53 @@ export default function AnalysisPage() {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* 历史记录板块 */}
+          <div className="mt-12 bg-white rounded-3xl border border-gray-100 shadow-xl p-8">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
+                  <History size={24} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-gray-900">历史分析记录</h3>
+                  <p className="text-sm text-gray-500">查看和管理之前的分析报告</p>
+                </div>
+              </div>
+              <Link 
+                href="/analysis/history"
+                className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 font-bold transition-colors"
+              >
+                <span>查看全部</span>
+                <ChevronRight size={18} />
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {historyRecords.length > 0 ? (
+                historyRecords.slice(0, 3).map((item: any, index: number) => (
+                  <Link
+                    key={index}
+                    href={`/report/${item.id}`}
+                    className="p-4 bg-gray-50 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all group"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-gray-500 uppercase">{item.meta?.subject || '通用'}</span>
+                      {item.enhanced && (
+                        <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">V1.5</span>
+                      )}
+                    </div>
+                    <div className="text-sm font-bold text-gray-900 mb-1">{item.meta?.grade || '未定年级'}</div>
+                    <div className="text-xs text-gray-500">{new Date(item.meta?.date || Date.now()).toLocaleDateString()}</div>
+                  </Link>
+                ))
+              ) : (
+                <div className="col-span-3 text-center py-8 text-gray-400">
+                  <History className="mx-auto mb-2 opacity-50" size={32} />
+                  <p className="text-sm">暂无历史记录</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </main>

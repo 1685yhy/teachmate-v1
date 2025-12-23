@@ -8,14 +8,22 @@ import {
   Mic, 
   FilePlus, 
   Settings,
-  LogOut
+  LogOut,
+  Video,
+  GitCompare,
+  Trophy,
+  Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const menuItems = [
   { icon: LayoutDashboard, label: '首页', href: '/' },
   { icon: Mic, label: '课堂分析', href: '/analysis' },
+  { icon: Video, label: '深度分析（V1.5）', href: '/analysis-enhanced' },
   { icon: FilePlus, label: '教案生成', href: '/lesson-plan' },
+  { icon: GitCompare, label: '多版本对比', href: '/lesson-plan-comparison' },
+  { icon: Trophy, label: '成长里程碑', href: '/growth' },
+  { icon: Users, label: '教研协作', href: '/collaboration' },
 ];
 
 export function Sidebar() {
@@ -58,8 +66,8 @@ export function Sidebar() {
       <div className="p-4 border-t border-gray-100 space-y-2">
         <div className="px-4 py-2">
           <div className="flex items-center justify-between text-[10px] font-black text-gray-400 uppercase tracking-widest">
-            <span>Version 1.0.0</span>
-            <span className="text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded">MVP</span>
+            <span>Version 1.5.0</span>
+            <span className="text-purple-500 bg-purple-50 px-1.5 py-0.5 rounded">专业深化</span>
           </div>
         </div>
         <button className="flex items-center space-x-3 w-full px-4 py-3 text-gray-500 hover:bg-gray-50 rounded-xl transition-colors">

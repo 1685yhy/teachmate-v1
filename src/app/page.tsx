@@ -8,7 +8,8 @@ import {
   Mic, 
   PieChart, 
   TrendingUp,
-  ChevronRight
+  ChevronRight,
+  GitCompare
 } from 'lucide-react';
 import { Header } from '@/components/Header';
 import Link from 'next/link';
@@ -17,12 +18,15 @@ import { cn } from '@/lib/utils';
 export default function Dashboard() {
   const [analysisHistory, setAnalysisHistory] = useState<any[]>([]);
   const [lessonPlans, setLessonPlans] = useState<any[]>([]);
+  const [comparisons, setComparisons] = useState<any[]>([]);
 
   useEffect(() => {
     const analysis = JSON.parse(localStorage.getItem('analysis_history') || '[]');
     const plans = JSON.parse(localStorage.getItem('lesson_plans') || '[]');
+    const comps = JSON.parse(localStorage.getItem('lesson_plan_comparisons') || '[]');
     setAnalysisHistory(analysis);
     setLessonPlans(plans);
+    setComparisons(comps);
   }, []);
 
   const stats = {
@@ -160,32 +164,109 @@ export default function Dashboard() {
             </div>
 
             {/* Recent History */}
-            <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
-              <div className="flex items-center justify-between mb-8">
-                <h3 className="text-lg font-bold text-gray-800">最近分析记录</h3>
-                <Link href="/analysis" className="text-blue-600 text-sm font-bold hover:text-blue-700 transition-colors">查看全部</Link>
-              </div>
-              <div className="space-y-6">
-                {analysisHistory.length > 0 ? (
-                  analysisHistory.slice(0, 3).map((item, index) => (
-                    <div key={index} className="flex items-center justify-between group cursor-pointer p-2 -m-2 rounded-xl hover:bg-gray-50 transition-colors">
-                      <div className="flex items-center space-x-4">
-                        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center bg-blue-100 text-blue-600")}>
-                          <History size={20} />
-                        </div>
-                        <div>
-                          <div className="text-sm font-bold text-gray-800">{item.meta.subject || '通用'} ({item.meta.grade || '未定'})</div>
-                          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
-                            {new Date(item.meta.date).toLocaleDateString()} · 开放式 {(item.analysis.open_question_ratio * 100).toFixed(0)}%
+            <div className="space-y-6">
+              {/* 分析记录 */}
+              <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-bold text-gray-800">最近分析记录</h3>
+                  <Link href="/analysis" className="text-blue-600 text-sm font-bold hover:text-blue-700 transition-colors">查看全部</Link>
+                </div>
+                <div className="space-y-4">
+                  {analysisHistory.length > 0 ? (
+                    analysisHistory.slice(0, 3).map((item, index) => (
+                    <Link 
+                      key={index} 
+                      href={`/report/${item.id}`}
+                      className="flex items-center justify-between group cursor-pointer p-2 -m-2 rounded-xl hover:bg-gray-50 transition-colors"
+                      prefetch={false}
+                    >
+                        <div className="flex items-center space-x-4">
+                          <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center bg-blue-100 text-blue-600")}>
+                            <History size={20} />
+                          </div>
+                          <div>
+                            <div className="text-sm font-bold text-gray-800">{item.meta?.subject || '通用'} ({item.meta?.grade || '未定'})</div>
+                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                              {new Date(item.meta?.date || Date.now()).toLocaleDateString()} · 开放式 {((item.analysis?.open_question_ratio ?? 0) * 100).toFixed(0)}%
+                              {item.enhanced && <span className="ml-2 text-purple-500">V1.5</span>}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <ChevronRight size={18} className="text-gray-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-gray-400 text-sm italic">暂无记录</div>
-                )}
+                        <ChevronRight size={18} className="text-gray-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+                      </Link>
+                    ))
+                  ) : (
+                    <div className="text-center py-4 text-gray-400 text-sm italic">暂无记录</div>
+                  )}
+                </div>
+              </div>
+
+              {/* 教案记录 */}
+              <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-bold text-gray-800">最近教案</h3>
+                  <Link href="/lesson-plan" className="text-green-600 text-sm font-bold hover:text-green-700 transition-colors">查看全部</Link>
+                </div>
+                <div className="space-y-4">
+                  {lessonPlans.length > 0 ? (
+                    lessonPlans.slice(0, 3).map((item, index) => (
+                      <Link 
+                        key={index} 
+                        href={`/lesson-plan?history=${item.id}`}
+                        className="flex items-center justify-between group cursor-pointer p-2 -m-2 rounded-xl hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-center space-x-4">
+                          <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center bg-green-100 text-green-600")}>
+                            <FileText size={20} />
+                          </div>
+                          <div>
+                            <div className="text-sm font-bold text-gray-800">{item.theme || '教案'}</div>
+                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                              {new Date(item.date || Date.now()).toLocaleDateString()} · {item.version || '标准版'}
+                            </div>
+                          </div>
+                        </div>
+                        <ChevronRight size={18} className="text-gray-300 group-hover:text-green-600 group-hover:translate-x-1 transition-all" />
+                      </Link>
+                    ))
+                  ) : (
+                    <div className="text-center py-4 text-gray-400 text-sm italic">暂无记录</div>
+                  )}
+                </div>
+              </div>
+
+              {/* 多版本对比记录 */}
+              <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-bold text-gray-800">版本对比</h3>
+                  <Link href="/lesson-plan-comparison" className="text-purple-600 text-sm font-bold hover:text-purple-700 transition-colors">查看全部</Link>
+                </div>
+                <div className="space-y-4">
+                  {comparisons.length > 0 ? (
+                    comparisons.slice(0, 3).map((item, index) => (
+                      <Link 
+                        key={index} 
+                        href={`/lesson-plan-comparison?history=${item.id}`}
+                        className="flex items-center justify-between group cursor-pointer p-2 -m-2 rounded-xl hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-center space-x-4">
+                          <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center bg-purple-100 text-purple-600")}>
+                            <GitCompare size={20} />
+                          </div>
+                          <div>
+                            <div className="text-sm font-bold text-gray-800">{item.theme || '对比'}</div>
+                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                              {new Date(item.date || Date.now()).toLocaleDateString()} · {item.versions?.length || 0}个版本
+                            </div>
+                          </div>
+                        </div>
+                        <ChevronRight size={18} className="text-gray-300 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
+                      </Link>
+                    ))
+                  ) : (
+                    <div className="text-center py-4 text-gray-400 text-sm italic">暂无记录</div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
