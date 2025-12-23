@@ -433,14 +433,38 @@ export default function EnhancedAnalysisPage() {
                   </div>
                 )}
 
+                {/* 教育理论洞察 */}
+                {analysisResult.analysis.education_theory_insights && analysisResult.analysis.education_theory_insights.length > 0 && (
+                  <div className="mb-8 p-6 rounded-2xl bg-purple-50 border-2 border-purple-200">
+                    <h4 className="text-lg font-black text-gray-900 flex items-center space-x-2 mb-4">
+                      <Target className="text-purple-600" size={20} />
+                      <span>🎓 教育理论洞察</span>
+                    </h4>
+                    <div className="space-y-4">
+                      {analysisResult.analysis.education_theory_insights.map((insight: any, idx: number) => (
+                        <div key={idx} className="bg-white p-4 rounded-xl border border-purple-100">
+                          <div className="text-sm font-black text-purple-600 mb-2">{insight.theory}</div>
+                          <div className="text-sm text-gray-700 mb-2">{insight.observation}</div>
+                          <div className="text-xs text-gray-600 mb-2">
+                            <strong>评估：</strong>{insight.evaluation}
+                          </div>
+                          <div className="text-xs text-blue-700">
+                            <strong>建议：</strong>{insight.suggestion}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* 12维关键数据 - 用于量化衡量 */}
                 {analysisResult.analysis.metrics && (
                   <div className="mb-8">
                     <h4 className="text-lg font-bold text-gray-900 flex items-center space-x-2 mb-4">
                       <BarChart2 className="text-gray-600" size={20} />
-                      <span>📊 量化指标（用于衡量改进效果）</span>
+                      <span>📊 量化指标（基于教育测量学）</span>
                     </h4>
-                    <p className="text-sm text-gray-500 mb-4">以下指标可以帮助您量化评估改进建议的实施效果</p>
+                    <p className="text-sm text-gray-500 mb-4">以下指标基于教育测量学理论，可以帮助您量化评估改进建议的实施效果</p>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       {[
                         { key: 'open_question_ratio', label: '开放式问题比例', format: (v: number) => `${(v * 100).toFixed(0)}%`, target: '≥25%', desc: '衡量提问质量' },

@@ -221,9 +221,28 @@ export async function generateLessonPlan({
 
 /**
  * V1.5 增强版：12维教学行为分析 + 亮点识别
+ * 使用专业教育AI分析算法（基于教育理论）
  */
 export async function analyzeAudioEnhanced(transcript: string, subject?: string, grade?: string) {
-  const prompt = `你是一位资深教学督导，请对以下课堂转录进行深度分析。
+  // 优先使用专业教育AI分析算法
+  try {
+    const { analyzeTeachingWithEducationAI } = await import('./education-ai');
+    const result = await analyzeTeachingWithEducationAI(transcript, subject, grade);
+    // 确保返回格式完整
+    return {
+      highlights: result.highlights || [],
+      metrics: result.metrics || {},
+      suggestions: result.suggestions || [],
+      comparison: result.comparison || {},
+      growth_targets: result.growth_targets || [],
+      education_theory_insights: result.education_theory_insights || []
+    };
+  } catch (error) {
+    console.warn('教育AI分析不可用，使用标准分析:', error);
+  }
+
+  // 后备方案：标准分析（基于教育理论）
+  const prompt = `你是一位资深教学督导，请对以下课堂转录进行深度分析（基于教育心理学、教学论、课堂观察理论）。
 
 转录文本："${transcript}"
 ${subject ? `学科：${subject}` : ''}
@@ -509,10 +528,40 @@ ${grade ? `年级：${grade}` : ''}
 
 /**
  * 课堂行为分析 - 使用最新的 DeepSeek-V3 (Chat)
- * 擅长结构化数据处理，速度极快
+ * 优先使用专业教育AI分析算法（基于教育理论）
  */
 export async function analyzeAudio(transcript: string) {
-  const prompt = `你是一位教学督导，请根据以下转录文本进行课堂分析：
+  // 优先使用专业教育AI分析算法
+  try {
+    const { analyzeTeachingWithEducationAI } = await import('./education-ai');
+    const result = await analyzeTeachingWithEducationAI(transcript);
+    // 转换为标准格式
+    return {
+      highlights: result.highlights.map((h: any) => ({
+        title: h.title,
+        description: h.description,
+        evidence: h.evidence,
+        impact: h.impact
+      })),
+      open_question_ratio: result.metrics.open_question_ratio,
+      speech_rate: result.metrics.speech_rate,
+      positive_feedback_count: result.metrics.positive_feedback_count,
+      suggestions: result.suggestions.map((s: any) => ({
+        title: s.title,
+        current_performance: s.current_performance,
+        current_performance_details: s.current_performance_details || [],
+        advice: s.advice,
+        example: s.example,
+        expected_effect: s.expected_effect,
+        training_method: s.training_method
+      }))
+    };
+  } catch (error) {
+    console.warn('教育AI分析不可用，使用标准分析:', error);
+  }
+
+  // 后备方案：标准分析（基于教育理论）
+  const prompt = `你是一位教学督导，请根据以下转录文本进行课堂分析（基于教育心理学和教学论）：
 
 转录文本："${transcript}"
 
@@ -765,4 +814,121 @@ export async function transcribeAudio(file: File): Promise<TranscriptionResult> 
     // 其他错误
     throw new Error(`音频转录失败: ${error.message || error.statusText || '未知错误'}`);
   }
+}
+
+/**
+ * 教研协作：同课异构对比分析
+ * 对比两位教师的教案，生成AI分析结论
+ */
+export async function compareLessonPlans({
+  teacher1Plan,
+  teacher2Plan,
+  theme,
+  subject,
+  grade,
+}: {
+  teacher1Plan: string;
+  teacher2Plan: string;
+  theme: string;
+  subject: string;
+  grade: string;
+}) {
+  const prompt = `你是教学督导专家，请对比分析两位教师关于《${theme}》的同课异构教案。
+
+${subject ? `学科：${subject}` : ''}
+${grade ? `年级：${grade}` : ''}
+
+**教师A的教案：**
+${teacher1Plan}
+
+**教师B的教案：**
+${teacher2Plan}
+
+请从以下维度进行对比分析：
+1. 导入方式：如何引入课题
+2. 核心问题链：主要教学问题设计
+3. 学生活动：学生参与方式
+4. 时间分配：各环节时间安排
+5. 教学重点：重点内容处理方式
+6. 评价方式：如何评估学习效果
+
+请生成详细的对比分析，包括：
+- 每位教师的优势和特点
+- 融合建议：如何结合两位教师的优点
+
+请严格按照以下 JSON 格式返回：
+{
+  "teacher1": "教师A的优势和特点分析（100-200字）",
+  "teacher2": "教师B的优势和特点分析（100-200字）",
+  "suggestion": "融合建议：如何结合两位教师的优点（100-200字）",
+  "comparisons": [
+    {
+      "dimension": "导入方式",
+      "teacher1": "教师A的导入方式描述",
+      "teacher2": "教师B的导入方式描述"
+    },
+    {
+      "dimension": "核心问题链",
+      "teacher1": "教师A的问题链设计",
+      "teacher2": "教师B的问题链设计"
+    },
+    {
+      "dimension": "学生活动",
+      "teacher1": "教师A的学生活动设计",
+      "teacher2": "教师B的学生活动设计"
+    },
+    {
+      "dimension": "时间分配",
+      "teacher1": "教师A的时间分配",
+      "teacher2": "教师B的时间分配"
+    }
+  ]
+}
+
+请用中文回答，分析要具体、专业、可操作。`;
+
+  try {
+    const response = await retryWithBackoff(async () => {
+      return await openai.chat.completions.create({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: '你是一位资深的教学督导专家，擅长分析教学设计和提供专业建议。' },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.7,
+      });
+    });
+
+    const content = response.choices[0].message.content || '';
+    
+    // 尝试解析JSON
+    try {
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return parsed;
+      }
+    } catch (e) {
+      console.warn('JSON解析失败，使用文本解析:', e);
+    }
+
+    // 如果JSON解析失败，使用文本解析
+    return {
+      teacher1: extractText(content, '教师A', '教师B') || '教师A的教案设计有特色，值得学习',
+      teacher2: extractText(content, '教师B', '融合') || '教师B的教案设计有特色，值得学习',
+      suggestion: extractText(content, '融合', '') || '建议结合两位教师的优点，形成更优的教学设计',
+      comparisons: []
+    };
+  } catch (error: any) {
+    console.error('对比分析错误:', error);
+    throw new Error(`对比分析失败: ${error.message || '未知错误'}`);
+  }
+}
+
+function extractText(text: string, startMarker: string, endMarker: string): string {
+  const startIndex = text.indexOf(startMarker);
+  if (startIndex === -1) return '';
+  
+  const endIndex = endMarker ? text.indexOf(endMarker, startIndex) : text.length;
+  return text.substring(startIndex, endIndex > startIndex ? endIndex : text.length).trim();
 }

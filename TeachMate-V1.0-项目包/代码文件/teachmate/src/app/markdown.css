@@ -1,0 +1,32 @@
+.markdown-container h1 {
+  @apply text-2xl font-black text-gray-900 mb-6 border-b-4 border-blue-600 pb-2 inline-block;
+}
+
+.markdown-container h2 {
+  @apply text-lg font-black text-gray-800 flex items-center space-x-2 mt-10 mb-4;
+}
+
+.markdown-container h3 {
+  @apply text-sm font-bold text-gray-700 mt-6 mb-2;
+}
+
+.markdown-container p {
+  @apply text-gray-600 text-sm leading-relaxed mb-4;
+}
+
+.markdown-container ul, .markdown-container ol {
+  @apply pl-6 mb-4 space-y-1;
+}
+
+.markdown-container li {
+  @apply text-gray-600 text-sm list-disc;
+}
+
+.markdown-container strong {
+  @apply text-gray-900 font-bold;
+}
+
+.markdown-container blockquote {
+  @apply border-l-4 border-blue-100 pl-4 italic text-gray-500 my-6;
+}
+

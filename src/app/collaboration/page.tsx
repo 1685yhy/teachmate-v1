@@ -15,6 +15,7 @@ import {
   Download
 } from 'lucide-react';
 import { Header } from '@/components/Header';
+import { ComparisonItem } from '@/components/ComparisonItem';
 import { cn } from '@/lib/utils';
 
 export default function CollaborationPage() {
@@ -111,6 +112,18 @@ export default function CollaborationPage() {
             <div className="space-y-6">
               {/* 同课异构对比列表 */}
               {comparisonData.map((comparison) => (
+                <ComparisonItem
+                  key={comparison.id}
+                  comparison={comparison}
+                  onUpdate={(updated) => {
+                    const updatedData = comparisonData.map(c => c.id === comparison.id ? updated : c);
+                    setComparisonData(updatedData);
+                  }}
+                />
+              ))}
+              
+              {/* 临时保留原代码用于参考 */}
+              {false && comparisonData.map((comparison) => (
                 <div key={comparison.id} className="bg-white rounded-3xl border border-gray-100 shadow-xl p-8">
                   <div className="flex items-center justify-between mb-6">
                     <div>
@@ -224,28 +237,42 @@ export default function CollaborationPage() {
                       </div>
                       <div className="flex items-center space-x-4 pt-4">
                         <button 
-                          onClick={() => {
-                            // 保存到本地存储
+                          onClick={async () => {
+                            const themeInput = (document.querySelector('input[placeholder="例如：背影"]') as HTMLInputElement)?.value || '新课题';
+                            const subjectInput = (document.querySelector('select') as HTMLSelectElement)?.value || '语文';
+                            const gradeInput = (document.querySelectorAll('select')[1] as HTMLSelectElement)?.value || '八年级';
+                            const teachersInput = (document.querySelector('input[placeholder*="教师姓名"]') as HTMLInputElement)?.value || '王老师,李老师';
+                            const teachers = teachersInput.split(',').map(t => t.trim()).filter(t => t);
+                            
+                            if (teachers.length < 2) {
+                              alert('请至少输入2位教师姓名');
+                              return;
+                            }
+
+                            // 创建对比任务（待上传教案）
                             const newComparison = {
                               id: Date.now().toString(),
-                              teachers: ['王老师', '李老师'],
-                              theme: '新课题',
-                              subject: '语文',
-                              grade: '八年级',
+                              teachers: teachers.slice(0, 2),
+                              theme: themeInput,
+                              subject: subjectInput,
+                              grade: gradeInput,
                               date: new Date().toISOString(),
+                              teacher1Plan: '',
+                              teacher2Plan: '',
                               comparisons: [],
                               aiAnalysis: {
-                                teacher1: '待分析',
-                                teacher2: '待分析',
-                                suggestion: '请上传教案后进行AI分析'
-                              }
+                                teacher1: '待上传教案',
+                                teacher2: '待上传教案',
+                                suggestion: '请两位教师分别上传教案，系统将自动进行AI对比分析'
+                              },
+                              status: 'waiting_plans'
                             };
                             const history = JSON.parse(localStorage.getItem('comparison_history') || '[]');
                             const updated = [newComparison, ...history].slice(0, 20);
                             localStorage.setItem('comparison_history', JSON.stringify(updated));
                             setComparisonData([newComparison, ...comparisonData]);
                             setShowCreateComparison(false);
-                            alert('创建成功！请邀请教师上传教案进行对比。');
+                            alert('创建成功！请两位教师分别上传教案，系统将自动进行AI对比分析。');
                           }}
                           className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors"
                         >

@@ -54,37 +54,98 @@ const abilityModel = {
 
 export default function GrowthMilestonePage() {
   const [growthData, setGrowthData] = useState({
-    overallIndex: 82,
-    previousIndex: 75,
-    analysisCount: 12,
-    weeksActive: 8,
+    overallIndex: 0,
+    previousIndex: 0,
+    analysisCount: 0,
+    weeksActive: 0,
     metrics: {
-      open_question_ratio: { current: 22, previous: 15 },
-      positive_feedback: { current: 5.8, previous: 4.2 },
-      student_activity_time: { current: 42, previous: 35 },
-      speech_rate: { current: 210, previous: 225 },
+      open_question_ratio: { current: 0, previous: 0 },
+      positive_feedback: { current: 0, previous: 0 },
+      speech_rate: { current: 0, previous: 0 },
     },
-    achievements: [
-      { id: 'question-master', name: '提问高手', desc: '开放式问题>20%持续3周', icon: Target, unlocked: true },
-      { id: 'interaction-star', name: '互动达人', desc: '学生活动时间>40%', icon: Users, unlocked: true },
-      { id: 'reflection-expert', name: '反思专家', desc: '连续8周使用分析功能', icon: Shield, unlocked: true },
-    ],
-    milestones: [
-      { id: 'first-analysis', name: '首次分析', desc: '完成第一次课堂分析', unlocked: true, date: '2024-01-08' },
-      { id: '10-analyses', name: '十次分析', desc: '累计完成10次分析', unlocked: true, date: '2024-01-20' },
-      { id: 'improvement-master', name: '改进大师', desc: '连续4周有改进', unlocked: false },
-    ]
+    achievements: [],
+    milestones: []
   });
+  const [isLoading, setIsLoading] = useState(true);
 
-  // 模拟雷达图数据
+  // 从真实分析数据计算成长指标
+  useEffect(() => {
+    const calculateGrowth = async () => {
+      if (typeof window === 'undefined') return;
+      
+      try {
+        const analysisHistory = JSON.parse(localStorage.getItem('analysis_history') || '[]');
+        
+        if (analysisHistory.length === 0) {
+          setIsLoading(false);
+          return;
+        }
+
+        const response = await fetch('/api/growth/calculate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ analysisHistory })
+        });
+
+        const data = await response.json();
+        if (data.error) {
+          console.error('成长数据计算失败:', data.error);
+          setIsLoading(false);
+          return;
+        }
+
+        // 添加图标到成就和里程碑
+        const achievementsWithIcons = data.achievements.map((a: any) => ({
+          ...a,
+          icon: a.id === 'question-master' ? Target : 
+                a.id === 'reflection-expert' ? Shield : Users
+        }));
+
+        const milestonesWithIcons = data.milestones.map((m: any) => ({
+          ...m,
+          icon: CheckCircle2
+        }));
+
+        setGrowthData({
+          ...data,
+          achievements: achievementsWithIcons,
+          milestones: milestonesWithIcons
+        });
+      } catch (error) {
+        console.error('加载成长数据失败:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    calculateGrowth();
+  }, []);
+
+  // 基于真实数据计算雷达图（简化版）
   const radarData = {
-    '目标设计': 4.2,
-    '活动设计': 3.8,
-    '语言表达': 4.5,
-    '互动引导': 4.0,
-    '课堂管理': 3.9,
-    '反思改进': 4.1,
+    '目标设计': Math.min(5, (growthData.metrics.open_question_ratio.current / 30) * 5),
+    '活动设计': Math.min(5, (growthData.metrics.positive_feedback.current / 10) * 5),
+    '语言表达': Math.min(5, growthData.metrics.speech_rate.current >= 180 && growthData.metrics.speech_rate.current <= 220 ? 5 : 3),
+    '互动引导': Math.min(5, (growthData.metrics.open_question_ratio.current / 30) * 5),
+    '课堂管理': Math.min(5, (growthData.overallIndex / 100) * 5),
+    '反思改进': Math.min(5, (growthData.analysisCount / 20) * 5),
   };
+
+  if (isLoading) {
+    return (
+      <>
+        <Header title="教师成长追踪系统（V1.5）" />
+        <main className="flex-1 overflow-y-auto p-8">
+          <div className="max-w-7xl mx-auto flex items-center justify-center h-96">
+            <div className="text-center">
+              <div className="text-2xl font-black text-gray-400 mb-4">加载成长数据中...</div>
+              <div className="text-sm text-gray-500">基于您的真实分析数据计算成长指标</div>
+            </div>
+          </div>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
