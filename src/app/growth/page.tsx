@@ -18,6 +18,24 @@ import {
 import { Header } from '@/components/Header';
 import { cn } from '@/lib/utils';
 
+// 类型定义
+interface Achievement {
+  id: string;
+  name: string;
+  desc: string;
+  unlocked: boolean;
+  icon?: any;
+}
+
+interface Milestone {
+  id: string;
+  name: string;
+  desc: string;
+  unlocked: boolean;
+  date?: string;
+  icon?: any;
+}
+
 // 三级九维能力模型
 const abilityModel = {
   'A': {
@@ -53,7 +71,19 @@ const abilityModel = {
 };
 
 export default function GrowthMilestonePage() {
-  const [growthData, setGrowthData] = useState({
+  const [growthData, setGrowthData] = useState<{
+    overallIndex: number;
+    previousIndex: number;
+    analysisCount: number;
+    weeksActive: number;
+    metrics: {
+      open_question_ratio: { current: number; previous: number };
+      positive_feedback: { current: number; previous: number };
+      speech_rate: { current: number; previous: number };
+    };
+    achievements: Achievement[];
+    milestones: Milestone[];
+  }>({
     overallIndex: 0,
     previousIndex: 0,
     analysisCount: 0,
