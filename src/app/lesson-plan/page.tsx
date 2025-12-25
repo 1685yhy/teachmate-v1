@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
@@ -24,7 +24,7 @@ import {
 import { Header } from '@/components/Header';
 import { cn } from '@/lib/utils';
 
-export default function LessonPlanPage() {
+function LessonPlanContent() {
   const searchParams = useSearchParams();
   const historyId = searchParams.get('history');
   
@@ -384,6 +384,25 @@ export default function LessonPlanPage() {
         </div>
       </main>
     </>
+  );
+}
+
+export default function LessonPlanPage() {
+  return (
+    <Suspense fallback={
+      <>
+        <Header title="智能教案生成" />
+        <main className="flex-1 overflow-y-auto p-8">
+          <div className="max-w-6xl mx-auto flex items-center justify-center h-96">
+            <div className="text-center">
+              <div className="text-2xl font-black text-gray-400 mb-4">加载中...</div>
+            </div>
+          </div>
+        </main>
+      </>
+    }>
+      <LessonPlanContent />
+    </Suspense>
   );
 }
 
